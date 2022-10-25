@@ -22,37 +22,37 @@ export class VEB {
   public insert(x: number): boolean {
     const { min, max, _size } = this;
     if (x === min || x === max) { return false; }
-    if (_size === 0) {
-      this.min = x;
-      this.max = x;
-      this._size++;
-      return true;
-    }
-    
-    if (x < min) {
-      this.min = x;
-      x = min;
-    } else if (x > max) {
-      this.max = x;
-      x = max;
-    }
-
-    if (_size === 1) {
-      this._size++;
-      return true;
-    }
-
-    const { clusters } = this;
-    const i = x >>> this.shift;
-    if (!clusters.hasOwnProperty(i)) {
-      const cluster_size = 1 << this.shift;
-      clusters[i] = new VEB(cluster_size);
-      if (this.summary === null) {
-        this.summary = new VEB(Math.ceil(this.bound / cluster_size));
+    let is_new = true;
+    z: { 
+      if (_size === 0) {
+        this.min = x;
+        this.max = x;
+        break z;
       }
-      this.summary.insert(i);
+      
+      if (x < min) {
+        this.min = x;
+        x = min;
+      } else if (x > max) {
+        this.max = x;
+        x = max;
+      }
+
+      if (_size === 1) { break z; }
+
+      const { clusters } = this;
+      const i = x >>> this.shift;
+      if (!clusters.hasOwnProperty(i)) {
+        const cluster_size = 1 << this.shift;
+        clusters[i] = new VEB(cluster_size);
+        if (this.summary === null) {
+          this.summary = new VEB(Math.ceil(this.bound / cluster_size));
+        }
+        this.summary.insert(i);
+      }
+
+      is_new = clusters[i].insert(x & this.lo_mask);
     }
-    const is_new = clusters[i].insert(x & this.lo_mask);
     if (is_new) { this._size++; }
     return is_new;
   }
@@ -60,51 +60,52 @@ export class VEB {
   public delete(x: number): boolean {
     let i: number;
     let j; Number;
-    let cluster: VEB;
-    const { min, max, _size } = this;
-    if (x === min) {
-      switch (_size) {
-        // if there are no sub-clusters
-        case 1:
-          this.max = -1;
-        case 2:
-          this.min = this.max;
-          this._size--;
-          return true;
+    let had_x = true;
+    z: {
+      const { min, max, _size } = this;
+      let cluster: VEB;
+      if (x === min) {
+        switch (_size) {
+          // if there are no sub-clusters
+          case 1:
+            this.max = -1;
+          case 2:
+            this.min = this.max;
+            break z;
+        }
+        // otherwise, pull the min up from one level down
+        i = this.summary!.min;
+        cluster = this.clusters[i];
+        j = cluster.min;
+        this.min = (i << this.shift) | j;
+      } else if (x === max) {
+        switch (_size) {
+          // if there are no sub-clusters
+          case 1:
+            this.min = -1;
+          case 2:
+            this.max = this.min;
+            break z;
+        }
+        // otherwise, pull the max up from one level down
+        i = this.summary!.max;
+        cluster = this.clusters[i];
+        j = cluster.max;
+        this.max = (i << this.shift) | j;
+      } else {
+        i = x >>> this.shift;
+        j = x & this.lo_mask;
+        cluster = this.clusters[i];
+        if (!cluster) { return false; }
       }
-      // otherwise, pull the min up from one level down
-      i = this.summary!.min;
-      cluster = this.clusters[i];
-      j = cluster.min;
-      this.min = (i << this.shift) | j;
-    } else if (x === max) {
-      switch (_size) {
-        // if there are no sub-clusters
-        case 1:
-          this.min = -1;
-        case 2:
-          this.max = this.min;
-          this._size--;
-          return true;
+      had_x = cluster.delete(j);
+      if (cluster._size === 0) {
+        this.summary!.delete(i);
+        if (this.summary!._size === 0) {
+          this.summary = null;
+        }
+        delete this.clusters[i];
       }
-      // otherwise, pull the max up from one level down
-      i = this.summary!.max;
-      cluster = this.clusters[i];
-      j = cluster.max;
-      this.max = (i << this.shift) | j;
-    } else {
-      i = x >>> this.shift;
-      j = x & this.lo_mask;
-      cluster = this.clusters[i];
-      if (!cluster) { return false; }
-    }
-    const had_x = cluster.delete(j);
-    if (cluster._size === 0) {
-      this.summary!.delete(i);
-      if (this.summary!._size === 0) {
-        this.summary = null;
-      }
-      delete this.clusters[i];
     }
     if (had_x) { this._size--; }
     return had_x;
