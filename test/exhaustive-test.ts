@@ -4,17 +4,22 @@ import { VEB } from '../src';
 
 describe("Random Tests", () => {
   const entries: number[] = [];
-  let x = 0;
-  for (let i = 0; i < 16; i++) {
-    x += 1 + Math.floor(4 * Math.random());
-    entries.push(x);
+  const outries: number[] = [];
+  {
+    let x = 0;
+    for (let i = 0; i < 16; i++) {
+      x += 1 + Math.floor(2 * Math.random());
+      entries.push(x);
+      x += 1 + Math.floor(2 * Math.random());
+      outries.push(x);
+    }
   }
 
   const v = new VEB(64);
 
   it("should add all the numbers to the tree", () => {
     for (const x of entries) {
-      v.insert(x);
+      expect(v.insert(x)).to.be.true;
       expect(v.has(x)).to.be.true;
     }
   });
@@ -23,6 +28,33 @@ describe("Random Tests", () => {
     for (const x of entries) {
       expect(v.has(x)).to.be.true;
     }
+  });
+
+  it("should not have elements that weren't added", () => {
+    for (const x of outries) {
+      expect(v.has(x)).to.be.false;
+    }
+  });
+
+  it("should have the right size", () => {
+    expect(v.size).to.eql(entries.length);
+  });
+
+  it("should be unchanged after inserting duplicates", () => {
+    for (const x of entries) {
+      expect(v.insert(x)).to.be.false;
+    }
+    expect(v.size).to.eql(entries.length);
+  });
+
+  it("should be unchanged after deleting missing items", () => {
+    for (const x of outries) {
+      expect(v.delete(x)).to.be.false;
+    }
+    for (const x of entries) {
+      expect(v.has(x)).to.be.true;
+    }
+    expect(v.size).to.eql(entries.length);
   });
   
   it("should iterate over the entries", () => {
@@ -43,9 +75,10 @@ describe("Random Tests", () => {
 
   it("should delete all the entries", () => {
     for (const x of entries) {
-      v.delete(x);
+      expect(v.delete(x)).to.be.true;
     }
     expect([...v]).to.eql([]);
+    expect(v.size).to.eql(0);
   });
 
 });
