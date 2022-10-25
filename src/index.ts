@@ -125,10 +125,14 @@ export class VEB {
   }
 
   public has(x: number): boolean {
-    if (x === this.min || x === this.max) { return true; }
-    const cluster = this.clusters[x >>> this.shift];
-    if (!cluster) { return false; }
-    return cluster.has(x & this.lo_mask);
+    let t: VEB = this;
+    for (;;) {
+      if (x === t.min || x === t.max) { return true; }
+      const cluster = t.clusters[x >>> t.shift];
+      if (!cluster) { return false; }
+      x = x & t.lo_mask;
+      t = cluster;
+    }
   }
 
   public prev(x: number): number {
