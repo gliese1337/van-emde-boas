@@ -33,92 +33,128 @@ export class VEB {
   get size() { return this._size; }
 
   public insert(x: number): boolean {
-    const { min, max, _size } = this;
-    if (x === min || x === max) { return false; }
     let is_new = true;
-    z: { 
+    let t: VEB = this;
+    const path: VEB[] = [];
+    for (;;) {
+      const { min, max, _size } = t;
+      if (x === min || x === max) {
+        is_new = false;
+        break;
+      }
+
       if (_size === 0) {
-        this.min = x;
-        this.max = x;
-        break z;
+        t.min = x;
+        t.max = x;
+        break;
       }
       
       if (x < min) {
-        this.min = x;
+        t.min = x;
         x = min;
       } else if (x > max) {
-        this.max = x;
+        t.max = x;
         x = max;
       }
 
-      if (_size === 1) { break z; }
+      if (_size === 1) { break; }
 
-      const { clusters } = this;
-      const i = x >>> this.shift;
+      const { clusters } = t;
+      const i = x >>> t.shift;
       if (!clusters.hasOwnProperty(i)) {
-        clusters[i] = new VEB(this.cluster_size);
-        if (this.summary === stub) {
-          this.summary = new VEB(this.cluster_count);
+        clusters[i] = new VEB(t.cluster_size);
+        if (t.summary === stub) {
+          t.summary = new VEB(t.cluster_count);
         }
-        this.summary.insert(i);
+        t.summary.insert(i);
       }
-      is_new = clusters[i].insert(x & this.lo_mask);
+      // this is equivalent to a recursive call
+      path.push(t);
+      x = x & t.lo_mask;
+      t = clusters[i];
     }
-    if (is_new) { this._size++; }
+    
+    if (is_new) {
+      for (const t of path) { t._size++ }
+      t._size++;
+    }
     return is_new;
   }
 
   public delete(x: number): boolean {
     let i: number;
     let j; Number;
-    const { min, max, _size } = this;
     let had_x = true;
-    z: {
+    let t: VEB = this;
+    const path: [VEB, number][] = [];
+    z: for (;;) {
+      const { min, max, _size } = t;
       let cluster: VEB;
       if (x === min) {
         switch (_size) {
           // if there are no sub-clusters
           case 1:
-            this.max = NaN;
+            t.max = NaN;
           case 2:
-            this.min = this.max;
+            t.min = t.max;
             break z;
         }
         // otherwise, pull the min up from one level down
-        i = this.summary.min;
-        cluster = this.clusters[i];
+        i = t.summary.min;
+        cluster = t.clusters[i];
         j = cluster.min;
-        this.min = (i << this.shift) | j;
+        t.min = (i << t.shift) | j;
       } else if (x === max) {
         switch (_size) {
           // if there are no sub-clusters
           case 1:
-            this.min = NaN;
+            t.min = NaN;
           case 2:
-            this.max = this.min;
+            t.max = t.min;
             break z;
         }
         // otherwise, pull the max up from one level down
-        i = this.summary.max;
-        cluster = this.clusters[i];
+        i = t.summary.max;
+        cluster = t.clusters[i];
         j = cluster.max;
-        this.max = (i << this.shift) | j;
+        t.max = (i << t.shift) | j;
       } else {
-        i = x >>> this.shift;
-        j = x & this.lo_mask;
-        cluster = this.clusters[i];
-        if (!cluster) { return false; }
-      }
-      had_x = cluster.delete(j);
-      if (cluster._size === 0) {
-        this.summary.delete(i);
-        if (this.summary._size === 0) {
-          this.summary = stub;
+        i = x >>> t.shift;
+        j = x & t.lo_mask;
+        cluster = t.clusters[i];
+        if (!cluster) { 
+          had_x = false;
+          break;
         }
-        delete this.clusters[i];
       }
+      // this is equivalent to a recursive call
+      path.push([t, i]);
+      t = cluster;
+      x = j;
     }
-    if (had_x) { this._size--; }
+    if (had_x) {
+      for (const [t, i] of path) {
+        t._size--;
+        // We're moving forward, so the sub-cluster
+        // size will not have been updated yet. Thus,
+        // we check for 1, which would become 0,
+        // rather than checking for zero directly.
+        if (t.clusters[i]._size === 1) {
+          if (t.summary._size === 1) {
+            t.summary = stub;
+          } else {
+            t.summary.delete(i);
+          }
+          delete t.clusters[i];
+          // if we delete a cluster, all of its
+          // children will be unreferenced, so
+          // there's no need to keep the rest
+          // of them up-to-date.
+          return true;
+        }
+      }
+      t._size--;
+    }
     return had_x;
   }
 
