@@ -1,16 +1,8 @@
-const stub = {
-  next(_: number) { return NaN; },
-  prev(_: number) { return NaN; },
-  *[Symbol.iterator]() {},
-} as unknown as VEB;
-
 export class VEB {
   private shift: number;
   private lo_mask: number;
-  private cluster_size: number;
-  private cluster_count: number;
-  private clusters: { [key: number]: VEB };
-  private summary: VEB = stub;
+  private clusters: Record<number, VEB>;
+  private summary: VEB | null = null;
   private min = NaN;
   private max = NaN;
   private _size = 0;
@@ -22,12 +14,7 @@ export class VEB {
     const lo_mask = 0xffffffff >>> (32 - shift);
     this.lo_mask = lo_mask;
 
-    const cluster_size = 1 << shift;
-    this.cluster_size = cluster_size;
     this.clusters = {};
-
-    this.cluster_count = Math.ceil(bound / cluster_size);
-    this.shift = shift;
   }
 
   get size() { return this._size; }
@@ -58,9 +45,10 @@ export class VEB {
     const { clusters } = this;
     const i = x >>> this.shift;
     if (!clusters.hasOwnProperty(i)) {
-      clusters[i] = new VEB(this.cluster_size);
-      if (this.summary === stub) {
-        this.summary = new VEB(this.cluster_count);
+      const cluster_size = 1 << this.shift;
+      clusters[i] = new VEB(cluster_size);
+      if (this.summary === null) {
+        this.summary = new VEB(Math.ceil(this.bound / cluster_size));
       }
       this.summary.insert(i);
     }
@@ -85,7 +73,7 @@ export class VEB {
           return true;
       }
       // otherwise, pull the min up from one level down
-      i = this.summary.min;
+      i = this.summary!.min;
       cluster = this.clusters[i];
       j = cluster.min;
       this.min = (i << this.shift) | j;
@@ -100,7 +88,7 @@ export class VEB {
           return true;
       }
       // otherwise, pull the max up from one level down
-      i = this.summary.max;
+      i = this.summary!.max;
       cluster = this.clusters[i];
       j = cluster.max;
       this.max = (i << this.shift) | j;
@@ -112,9 +100,9 @@ export class VEB {
     }
     const had_x = cluster.delete(j);
     if (cluster._size === 0) {
-      this.summary.delete(i);
-      if (this.summary._size === 0) {
-        this.summary = stub;
+      this.summary!.delete(i);
+      if (this.summary!._size === 0) {
+        this.summary = null;
       }
       delete this.clusters[i];
     }
@@ -131,7 +119,7 @@ export class VEB {
       const j = x & this.lo_mask;
       if (j <= cluster.max) { return (i << shift) | cluster.next(j); }
     }
-    i = summary.next(i+1);
+    i = summary !== null ? summary.next(i+1) : NaN;
     if (isNaN(i)) { return x <= max ? max : NaN; }
     return (i << shift) | clusters[i].min;
   }
@@ -152,7 +140,7 @@ export class VEB {
       const j = x & this.lo_mask;
       if (j >= cluster.min) { return (i << shift) | cluster.prev(j); }
     }
-    i = i > 0 ? summary.prev(i-1) : NaN;
+    i = i > 0 && summary !== null ? summary.prev(i-1) : NaN;
     if (isNaN(i)) { return x >= min ? min : NaN; }
     return (i << shift) | clusters[i].max;
   }
@@ -163,10 +151,12 @@ export class VEB {
     yield min;
     const { max, clusters } = this;
     if (max > min) {
-      const { shift } = this;
-      for (const i of this.summary) {
-        for (const j of clusters[i]) {
-          yield (i << shift) | j;
+      if (this.summary) {
+        const { shift } = this;
+        for (const i of this.summary) {
+          for (const j of clusters[i]) {
+            yield (i << shift) | j;
+          }
         }
       }
       yield max;

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "test": "mocha -r ts-node/register test/**/*-test.ts",
+    "bench": "ts-node test/benchmark.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts --fix",
     "minify": "jsmin -o bin/index.min.js bin/index.js && del bin\\index.js && move bin\\index.min.js bin\\index.js",
@@ -23,6 +24,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.14",
     "@types/mocha": "^8.0.4",
+    "@types/node": "^18.11.9",
     "@typescript-eslint/eslint-plugin": "^4.10.0",
     "@typescript-eslint/parser": "^4.10.0",
     "chai": "^4.2.0",
