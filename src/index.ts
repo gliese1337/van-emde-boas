@@ -3,8 +3,8 @@ export class VEB {
   private lo_mask: number;
   private clusters: Record<number, VEB>;
   private summary: VEB | null = null;
-  private min = NaN;
-  private max = NaN;
+  private min = -1;
+  private max = -1;
   private _size = 0;
   
   constructor(public readonly bound: number) {
@@ -66,7 +66,7 @@ export class VEB {
       switch (_size) {
         // if there are no sub-clusters
         case 1:
-          this.max = NaN;
+          this.max = -1;
         case 2:
           this.min = this.max;
           this._size--;
@@ -81,7 +81,7 @@ export class VEB {
       switch (_size) {
         // if there are no sub-clusters
         case 1:
-          this.min = NaN;
+          this.min = -1;
         case 2:
           this.max = this.min;
           this._size--;
@@ -119,8 +119,8 @@ export class VEB {
       const j = x & this.lo_mask;
       if (j <= cluster.max) { return (i << shift) | cluster.next(j); }
     }
-    i = summary !== null ? summary.next(i+1) : NaN;
-    if (isNaN(i)) { return x <= max ? max : NaN; }
+    i = summary !== null ? summary.next(i+1) : -1;
+    if (i === -1) { return x <= max ? max : -1; }
     return (i << shift) | clusters[i].min;
   }
 
@@ -140,8 +140,8 @@ export class VEB {
       const j = x & this.lo_mask;
       if (j >= cluster.min) { return (i << shift) | cluster.prev(j); }
     }
-    i = i > 0 && summary !== null ? summary.prev(i-1) : NaN;
-    if (isNaN(i)) { return x >= min ? min : NaN; }
+    i = i > 0 && summary !== null ? summary.prev(i-1) : -1;
+    if (i === -1) { return x >= min ? min : -1; }
     return (i << shift) | clusters[i].max;
   }
 
