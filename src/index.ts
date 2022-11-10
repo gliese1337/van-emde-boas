@@ -25,36 +25,31 @@ export class VEB {
     if (_size === 0) {
       this.min = x;
       this.max = x;
-      this._size++;
-      return true;
-    }
-    
-    if (x < min) {
-      this.min = x;
-      x = min;
-    } else if (x > max) {
-      this.max = x;
-      x = max;
-    }
-
-    if (_size === 1) {
-      this._size++;
-      return true;
-    }
-
-    const { clusters } = this;
-    const i = x >>> this.shift;
-    if (!clusters.hasOwnProperty(i)) {
-      const cluster_size = 1 << this.shift;
-      clusters[i] = new VEB(cluster_size);
-      if (this.summary === null) {
-        this.summary = new VEB(Math.ceil(this.bound / cluster_size));
+    } else {
+      if (x < min) {
+        this.min = x;
+        x = min;
+      } else if (x > max) {
+        this.max = x;
+        x = max;
       }
-      this.summary.insert(i);
+
+      if (_size > 1) {
+        const { clusters } = this;
+        const i = x >>> this.shift;
+        if (!clusters.hasOwnProperty(i)) {
+          const cluster_size = 1 << this.shift;
+          clusters[i] = new VEB(cluster_size);
+          if (this.summary === null) {
+            this.summary = new VEB(Math.ceil(this.bound / cluster_size));
+          }
+          this.summary.insert(i);
+        }
+        if (!clusters[i].insert(x & this.lo_mask)) { return false; }
+      }
     }
-    const is_new = clusters[i].insert(x & this.lo_mask);
-    if (is_new) { this._size++; }
-    return is_new;
+    this._size++;
+    return true;
   }
 
   public delete(x: number): boolean {
