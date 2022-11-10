@@ -8,7 +8,7 @@ suite.addFunction('van-emde-boas', (u, entries) => {
   const v = new VEB(u);
   for (const e of entries) v.insert(e);
   //for (const e of entries) v.next(e+1);
-  //for (const e of entries) v.delete(e);
+  //try { for (const e of entries) v.delete(e); } catch (e) {}
 });
 
 suite.addFunction('vebt', (u, entries) => {
@@ -20,7 +20,7 @@ suite.addFunction('vebt', (u, entries) => {
 
 for(const [u, s] of [
   [8, 6],
-  //[16, 7],
+  [16, 7],
   //[32, 16],
 ]) {
   const entries = [];

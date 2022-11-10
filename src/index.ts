@@ -20,6 +20,9 @@ export class VEB {
   get size() { return this._size; }
 
   public insert(x: number): boolean {
+    if (x >= this.bound || x < 0) {
+      throw new Error(`${x} is out of bounds for universe size ${ this.bound }.`);
+    }
     let t: VEB = this;
     let top = 0;
     const path: VEB[] = [];

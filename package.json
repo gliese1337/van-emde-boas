@@ -38,9 +38,6 @@
     "vebt": "^1.0.1"
   },
   "types": "./bin/index.d.ts",
-  "bin": {
-    "sparse-set": "bin/index.js"
-  },
   "directories": {
     "test": "test"
   }
