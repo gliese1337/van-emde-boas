@@ -20,37 +20,47 @@ export class VEB {
   get size() { return this._size; }
 
   public insert(x: number): boolean {
-    const { min, max, _size } = this;
-    if (x === min || x === max) { return false; }
-    if (_size === 0) {
-      this.min = x;
-      this.max = x;
-    } else {
+    let t: VEB = this;
+    let top = 0;
+    const path: VEB[] = [];
+    for (;;) {
+      const { min, max, _size } = t;
+      if (x === min || x === max) { return false; }
+      if (_size === 0) {
+        t.min = x;
+        t.max = x;
+        break;
+      }
+
       if (x < min) {
-        this.min = x;
+        t.min = x;
         x = min;
       } else if (x > max) {
-        this.max = x;
+        t.max = x;
         x = max;
       }
 
-      if (_size > 1) {
-        const { clusters } = this;
-        const i = x >>> this.shift;
-        let cluster = clusters[i];
-        if (!cluster) {
-          const cluster_size = 1 << this.shift;
-          cluster = new VEB(cluster_size);
-          clusters[i] = cluster;
-          if (this.summary === null) {
-            this.summary = new VEB(Math.ceil(this.bound / cluster_size));
-          }
-          this.summary.insert(i);
+      if (_size === 1) break;
+      
+      const { clusters } = t;
+      const i = x >>> t.shift;
+      let cluster = clusters[i];
+      if (!cluster) {
+        const cluster_size = 1 << t.shift;
+        cluster = new VEB(cluster_size);
+        clusters[i] = cluster;
+        if (t.summary === null) {
+          t.summary = new VEB(Math.ceil(t.bound / cluster_size));
         }
-        if (!cluster.insert(x & this.lo_mask)) { return false; }
+        t.summary.insert(i);
       }
+      // this is equivalent to a recursive call
+      path[top++] = t;
+      x = x & t.lo_mask;
+      t = cluster;
     }
-    this._size++;
+    while (top > 0) { path[--top]._size++ }
+    t._size++;
     return true;
   }
 
