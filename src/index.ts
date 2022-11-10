@@ -37,15 +37,17 @@ export class VEB {
       if (_size > 1) {
         const { clusters } = this;
         const i = x >>> this.shift;
-        if (!clusters.hasOwnProperty(i)) {
+        let cluster = clusters[i];
+        if (!cluster) {
           const cluster_size = 1 << this.shift;
-          clusters[i] = new VEB(cluster_size);
+          cluster = new VEB(cluster_size);
+          clusters[i] = cluster;
           if (this.summary === null) {
             this.summary = new VEB(Math.ceil(this.bound / cluster_size));
           }
           this.summary.insert(i);
         }
-        if (!clusters[i].insert(x & this.lo_mask)) { return false; }
+        if (!cluster.insert(x & this.lo_mask)) { return false; }
       }
     }
     this._size++;
