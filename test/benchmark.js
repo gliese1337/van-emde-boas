@@ -5,25 +5,17 @@ const { VEB } = require('../bin');
 const suite = new Benchtable('VEB', { isTransposed : true });
 
 suite.addFunction('van-emde-boas', (u, entries) => {
-  try {
-    const v = new VEB(u);
-    for (const e of entries) v.insert(e);
-    for (const e of entries) v.next(e+1);
-    //for (const e of entries) v.delete(e);
-  } catch (e) {
-    console.log(e);
-  }
+  const v = new VEB(u);
+  for (const e of entries) v.insert(e);
+  for (const e of entries) v.next(e+1);
+  for (const e of entries) v.delete(e);
 });
 
 suite.addFunction('vebt', (u, entries) => {
-  try {
-    const v = new VEBX(u);
-    for (const e of entries) v.insert(e);
-    for (const e of entries) v.next(e+1);
-    //for (const e of entries) v.remove(e);
-  } catch (e) {
-    console.log(e);
-  }
+  const v = new VEBX(u);
+  for (const e of entries) v.insert(e);
+  for (const e of entries) v.next(e+1);
+  try { for (const e of entries) v.remove(e); } catch (e) {}
 });
 
 for(const [u, s] of [
